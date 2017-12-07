@@ -1,0 +1,4 @@
+#! /usr/bin/env sh
+source activate site_bot
+/home/acq-user/site_bot/hourly_report
+source deactivate
