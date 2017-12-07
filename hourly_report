@@ -1,12 +1,12 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 from __future__ import print_function, division, unicode_literals
 
-import os
+import time
+from datetime import datetime, timedelta
 import psutil
 from subprocess import check_output, CalledProcessError
-import time
-import datetime
 
 from slackclient import SlackClient
 import pyowm
@@ -22,7 +22,7 @@ messages = []
 alerts = []
 
 messages.append('*Hourly Status Report*')
-messages.append(Time.now().iso[:-4])
+messages.append(Time(datetime.utcnow(), scale='utc').iso[:-4]+' UTC')
 
 HARTRAO_COORD = coords.EarthLocation.from_geodetic(
     lon=27.6853931*units.deg,
@@ -48,21 +48,19 @@ messages.append(current_weather_status)
 messages.append('Acquisition Scripts Status:')
 proc_names = ['kotekan', 'ch_master.py']
 
-def check_proc_status(proc_name):
+for proc_name in proc_names:
     try:
-        pid = check_output(['pgrep',proc_name]).splitlines()[0]
+        pid = check_output(['pgrep', '-f', proc_name]).splitlines()[0]
         proc = psutil.Process(int(pid))
         create_time = proc.create_time()
-        uptime = str(datetime.timedelta(seconds=time.time() - create_time))
+        uptime = str(timedelta(seconds=time.time() - create_time))
         uptime = uptime[:-9].replace(':', 'h ', 1).replace(':', 'm', 1)
-        messages.append('{:s}, status: {:s}, uptime: {:s}'.format(
-            proc_name, proc.status(), uptime))
+        messages.append('`{:s}` is running, uptime: {:s}'.format(
+            proc_name, uptime))
     except CalledProcessError:
+        messages.append('`{:s}` is *not* running.'.format(
+            proc_name))
         alerts.append('*Alert:* `{:s}` is not running.'.format(proc_name))
-        return None
-
-for pn in proc_names:
-    check_proc_status(pn)
 
 sc = SlackClient(HIRAX_BOT_TOKEN)
 sc.api_call(
@@ -79,3 +77,5 @@ if len(alerts) > 0:
         text='\n'.join(alerts),
         as_user=True,
     )
+
+
