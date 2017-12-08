@@ -17,7 +17,7 @@ from astropy.time import Time
 # Get API Tokens
 from hirax_tokens import HIRAX_BOT_TOKEN, OWM_TOKEN
 
-testing = True # If true output to bot_testing
+testing = False # If true output to bot_testing
 messages = []
 alerts = []
 
@@ -30,20 +30,21 @@ HARTRAO_COORD = coords.EarthLocation.from_geodetic(
     height=1415.710*units.m,
     ellipsoid='WGS84')
 
-owm = pyowm.OWM(OWM_TOKEN)
-hartrao_weather = owm.weather_around_coords(
-    HARTRAO_COORD.lat.degree,
-    HARTRAO_COORD.lon.degree)[0].get_weather()
+try:
+    owm = pyowm.OWM(OWM_TOKEN)
+    hartrao_weather = owm.weather_around_coords(
+        HARTRAO_COORD.lat.degree,
+        HARTRAO_COORD.lon.degree)[0].get_weather()
+    messages.append('Current weather: {:s}, {:.0f}°C'.format(
+        hartrao_weather.get_status(),
+        hartrao_weather.get_temperature('celsius')['temp']))
+except Exception:
+    messages.append('*Weather Lookup failed*')
 
 sun_alt = coords.get_sun(Time.now()).transform_to(
     coords.AltAz(location=HARTRAO_COORD)).alt.degree
 
-current_weather_status = 'Current weather: {:s}, {:.0f}°C, Sun Altitude: {:.0f}°'.format(
-    hartrao_weather.get_status(),
-    hartrao_weather.get_temperature('celsius')['temp'],
-    sun_alt)
-
-messages.append(current_weather_status)
+messages.append('Sun Altitude: {:.0f}°'.format(sun_alt))
 
 messages.append('Acquisition Scripts Status:')
 proc_names = ['kotekan', 'ch_master.py']
@@ -63,17 +64,19 @@ for proc_name in proc_names:
         alerts.append('*Alert:* `{:s}` is not running.'.format(proc_name))
 
 sc = SlackClient(HIRAX_BOT_TOKEN)
-sc.api_call(
+result = sc.api_call(
     "chat.postMessage",
-    channel='#bot_testing' if testing else '#site_status',
+    channel='#site_status_testing' if testing else '#site_status',
     text='\n'.join(messages),
     as_user=True,
 )
 
+print(result)
+
 if len(alerts) > 0:
     sc.api_call(
         "chat.postMessage",
-        channel='#bot_testing' if testing else '#site_alerts',
+        channel='#site_alerts_testing' if testing else '#site_alerts',
         text='\n'.join(alerts),
         as_user=True,
     )
