@@ -1,0 +1,6 @@
+#! /usr/bin/env bash
+PATH=/home/devin/miniconda3/envs/site_bot/bin:/home/devin/miniconda3/bin:/home/devin/bin:/home/devin/.local/bin:/home/devin/miniconda3/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+cd /home/devin/site_bot
+source activate site_bot
+./bot_checkin
+source deactivate

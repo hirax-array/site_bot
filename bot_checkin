@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from __future__ import print_function, division, unicode_literals
+import time
+from datetime import datetime
+
+from slackclient import SlackClient
+
+# Get API Tokens
+from hirax_tokens import HIRAX_BOT_TOKEN
+
+testing = False # If true output to bot_testing
+sc = SlackClient(HIRAX_BOT_TOKEN)
+
+bot_user_id = 'U89TN9CN9'
+site_status_channel_id = 'C8B6TKZ8D'
+lookback_hours = 2
+
+# Unix epoch time
+oldest = int(time.time() - lookback_hours*3600) # since lookback_hours
+print(datetime.utcfromtimestamp(oldest))
+print(oldest)
+
+result = sc.api_call(
+    'channels.history',
+    channel=site_status_channel_id,
+    oldest=str(oldest),
+    as_user=True,
+    inclusive=True,
+)
+
+from_bot = [mes for mes in result['messages'] if mes['user'] == bot_user_id]
+print(len(from_bot))
+if len(from_bot) < 1:
+    # Bot not checking in...
+    result = sc.api_call(
+        'channels.history',
+        channel=site_status_channel_id,
+        as_user=True,
+        count=20,
+    )
+    from_bot = [mes for mes in result['messages'] if mes['user'] == bot_user_id]
+    latest = from_bot[0]['ts']
+    strlatest = str(datetime.utcfromtimestamp(float(latest)))[:-7]
+
+    alert ='\n'.join([
+        '*Alert:* No status report within previous {:.1f} hours.'.format(float(lookback_hours)),
+        'Last site check-in at {:s} UTC'.format( strlatest)])
+
+    sc.api_call(
+        "chat.postMessage",
+        channel='#bot_testing' if testing else '#site_alerts',
+        text=alert,
+        as_user=True,
+    )
+else:
+    sc.api_call(
+        "chat.postMessage",
+        channel='#bot_testing',
+        text='Bot check-in successful',
+        as_user=True,
+    )
