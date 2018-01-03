@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function, division, unicode_literals
+from itertools import repeat, chain
 import time
 from datetime import datetime
 
@@ -15,7 +16,9 @@ sc = SlackClient(HIRAX_BOT_TOKEN)
 
 bot_user_id = 'U89TN9CN9'
 site_status_channel_id = 'C8B6TKZ8D'
+bot_testing_group_id = 'G89LY2ECB'
 lookback_hours = 2
+delete_older_than_days = 7
 
 # Unix epoch time
 oldest = int(time.time() - lookback_hours*3600) # since lookback_hours
@@ -61,3 +64,44 @@ else:
         text='Bot check-in successful',
         as_user=True,
     )
+
+delete_latest = int(time.time() - delete_older_than_days*3600*24)
+
+def accumulate_expired_messages(channel, latest, is_group=False):
+    has_more = True
+    messages = []
+    while has_more:
+        result = sc.api_call(
+            'channels.history' if not is_group else 'groups.history',
+            channel=channel,
+            latest=str(latest),
+            as_user=True,
+            inclusive=True,
+            count=1000)
+        messages.extend(result['messages'])
+        has_more = result['has_more']
+    return zip(repeat(channel), messages)
+
+# Channel, message pairs
+to_delete = list(chain(
+    accumulate_expired_messages(
+        site_status_channel_id, delete_latest, is_group=False),
+    accumulate_expired_messages(
+        bot_testing_group_id, delete_latest, is_group=True)))
+delete_count = len(to_delete)
+
+# Delete old messages
+if not testing:
+    for ch, mes in to_delete:
+        if mes['user'] == bot_user_id:
+            sc.api_call(
+                'chat.delete',
+                channel=ch,
+                ts=mes['ts'],
+                as_user=True)
+
+sc.api_call(
+        'chat.postMessage',
+        channel='#bot_testing',
+        text='Deleted {:d} old messages'.format(delete_count),
+        as_user=True)
