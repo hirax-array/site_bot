@@ -78,6 +78,7 @@ def accumulate_expired_messages(channel, latest, is_group=False):
             as_user=True,
             inclusive=True,
             count=1000)
+        time.sleep(1.1) # Avoid rate-limit
         messages.extend(result['messages'])
         has_more = result['has_more']
     return zip(repeat(channel), messages)
@@ -88,17 +89,18 @@ to_delete = list(chain(
         site_status_channel_id, delete_latest, is_group=False),
     accumulate_expired_messages(
         bot_testing_group_id, delete_latest, is_group=True)))
-delete_count = len(to_delete)
-
 # Delete old messages
+delete_count = 0
 if not testing:
     for ch, mes in to_delete:
-        if mes['user'] == bot_user_id:
+        if 'user' in mes and mes['user'] == bot_user_id:
             sc.api_call(
                 'chat.delete',
                 channel=ch,
                 ts=mes['ts'],
                 as_user=True)
+            delete_count += 1
+            time.sleep(1.1) # Avoid rate-limit
 
 sc.api_call(
         'chat.postMessage',
