@@ -53,7 +53,7 @@ if len(from_bot) < 1:
 
     sc.api_call(
         "chat.postMessage",
-        channel='#bot_testing' if testing else '#site_alerts',
+        channel='#site_alerts_testing' if testing else '#site_alerts',
         text=alert,
         as_user=True,
     )
