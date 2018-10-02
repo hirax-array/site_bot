@@ -17,6 +17,9 @@ sc = SlackClient(HIRAX_BOT_TOKEN)
 bot_user_id = 'U89TN9CN9'
 site_status_channel_id = 'C8B6TKZ8D'
 bot_testing_group_id = 'G89LY2ECB'
+site_status_testing_group_id = 'G89TD2H45'
+site_alerts_testing_group_id = 'G89P4CZR8'
+
 lookback_hours = 2
 delete_older_than_days = 7
 
@@ -88,7 +91,11 @@ to_delete = list(chain(
     accumulate_expired_messages(
         site_status_channel_id, delete_latest, is_group=False),
     accumulate_expired_messages(
-        bot_testing_group_id, delete_latest, is_group=True)))
+        bot_testing_group_id, delete_latest, is_group=True)),
+    accumulate_expired_messages(
+        site_status_testing_group_id, delete_latest, is_group=True),
+    accumulate_expired_messages(
+        site_alerts_testing_group_id, delete_latest, is_group=True))
 # Delete old messages
 delete_count = 0
 if not testing:
